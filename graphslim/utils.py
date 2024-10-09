@@ -7,7 +7,10 @@ import torch.nn.functional as F
 import torch.sparse as ts
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, roc_auc_score
-from torch_sparse import SparseTensor,fill_diag,matmul,mul
+from torch_sparse import SparseTensor
+from torch_sparse import fill_diag
+from torch_sparse import matmul
+from torch_sparse import mul
 from torch_sparse import sum as sparsesum
 from torch_geometric.utils import degree
 from torch_geometric.utils import add_remaining_self_loops

@@ -6,6 +6,7 @@ from graphslim.config import *
 
 from graphslim.evaluation.eval_agent import Evaluator
 from graphslim.coarsening.coarsening_base import Coarsen
+from graphslim.coarsening import HeavyEdge
 from graphslim.dataset import *
 
 args = cli(standalone_mode=False)

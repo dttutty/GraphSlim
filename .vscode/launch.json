@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: 当前文件",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "justMyCode": false,  // 允许进入模块内代码
+        "stopOnEntry": false, // 允许程序启动后暂停在入口处
+      }
+    ]
+  }
+  

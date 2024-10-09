@@ -6,7 +6,7 @@ if os.path.abspath('..') not in sys.path:
     sys.path.append(os.path.abspath('..'))
 import json
 import logging
-
+import torch
 import click
 from pprint import pformat
 import graphslim
