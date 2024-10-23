@@ -9,38 +9,31 @@ from graphslim.utils import *
 class BaseGNN(nn.Module):
 
     def __init__(self, nfeat, nhid, nclass, args, mode):
-
         super(BaseGNN, self).__init__()
+
+
         self.args = args
+        self.device = args.device
         self.with_bn = args.with_bn
         self.with_relu = True
         self.with_bias = True
-        self.weight_decay = args.weight_decay
-        self.lr = args.lr
-        self.dropout = args.dropout
-        self.alpha = args.alpha
         self.nlayers = args.nlayers
         self.ntrans = args.ntrans
-        self.device = args.device
-        self.layers = nn.ModuleList([])
-        self.loss = None
-
-        if mode == 'eval':
-            self.dropout = 0
-            self.weight_decay = 5e-4
-        if mode == 'attack':
-            self.loss = F.nll_loss
-
-        self.output = None
-        self.best_model = None
-        self.best_output = None
-        self.adj_norm = None
-        self.features = None
         self.multi_label = args.multi_label
-        self.float_label = None
-        # self.metric = accuracy if args.metric == 'accuracy' else f1_macro
         self.metric = args.metric
+        # self.metric = accuracy if args.metric == 'accuracy' else f1_macro
 
+        # 设置根据 mode 的不同调整的参数
+        self.loss = F.nll_loss if mode == 'attack' else None
+        self.dropout = 0 if mode == 'eval' else args.dropout
+        self.weight_decay = 5e-4 if mode == 'eval' else args.weight_decay
+    
+        self.lr = args.lr
+        self.alpha = args.alpha
+        self.output = self.best_model = self.best_output = self.adj_norm = self.features = self.float_label = None
+
+        self.layers = nn.ModuleList([])
+    
     def initialize(self):
         for layer in self.layers:
             layer.reset_parameters()
@@ -83,33 +76,8 @@ class BaseGNN(nn.Module):
 
         self.initialize()
         # data for training
-        if reduced:
-            adj, features, labels, labels_val = to_tensor(data.adj_syn, data.feat_syn, data.labels_syn,
-                                                          label2=data.labels_val,
-                                                          device=self.device)
-
-        elif setting == 'trans':
-            adj, features, labels, labels_val = to_tensor(data.adj_full, data.feat_full, label=data.labels_train,
-                                                          label2=data.labels_val, device=self.device)
-        else:
-            adj, features, labels, labels_val = to_tensor(data.adj_train, data.feat_train, label=data.labels_train,
-                                                          label2=data.labels_val, device=self.device)
-        if self.__class__.__name__ == 'GAT':
-            # gat must use SparseTensor
-            if len(adj.shape) == 3:
-                adj = [normalize_adj_tensor(a.to_sparse(), sparse=True) for a in adj]
-            else:
-                if not is_sparse_tensor(adj):
-                    adj = adj.to_sparse()
-                adj = normalize_adj_tensor(adj, sparse=True)
-
-        # SparseTensor synthetic graph only used in graphsage, msgc and simgc
-        elif self.__class__.__name__ == 'GraphSage' and args.method == 'msgc':
-            adj = adj
-        elif args.method == 'simgc':
-            adj = normalize_adj_tensor(adj, sparse=True)
-        else:
-            adj = normalize_adj_tensor(adj, sparse=is_sparse_tensor(adj))
+        adj, features, labels, labels_val = self._prepare_data(data, setting, reduced)
+        adj = self._process_adj_tensor(args, adj)
 
         if self.loss is None:
             if args.method == 'geom' and args.soft_label:
@@ -185,6 +153,30 @@ class BaseGNN(nn.Module):
         except:
             pass
         return best_acc_val.item()
+
+    def _process_adj_tensor(self, args, adj):
+        if self.__class__.__name__ == 'GAT':
+            if len(adj.shape) == 3:
+                adj = [normalize_adj_tensor(a.to_sparse(), sparse=True) for a in adj]
+            else:
+                adj = normalize_adj_tensor(adj.to_sparse() if not is_sparse_tensor(adj) else adj, sparse=True)
+
+        # SparseTensor synthetic graph only used in graphsage, msgc and simgc
+        elif self.__class__.__name__ == 'GraphSage' and args.method == 'msgc':
+            pass
+        elif args.method == 'simgc':
+            adj = normalize_adj_tensor(adj, sparse=True)
+        else:
+            adj = normalize_adj_tensor(adj, sparse=is_sparse_tensor(adj))
+        return adj
+
+    def _prepare_data(self, data, setting, reduced):
+        if reduced:
+            return to_tensor(data.adj_syn, data.feat_syn, data.labels_syn, label2=data.labels_val, device=self.device)
+        elif setting == 'trans':
+            return to_tensor(data.adj_full, data.feat_full, label=data.labels_train, label2=data.labels_val, device=self.device)
+        else:
+            return to_tensor(data.adj_train, data.feat_train, label=data.labels_train, label2=data.labels_val, device=self.device)
 
     @torch.no_grad()
     def test(self, data, setting='trans', verbose=False):

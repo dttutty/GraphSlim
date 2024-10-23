@@ -68,7 +68,8 @@ def csr2ei(adjacency_matrix_csr):
     return edge_index
 
 
-def ei2csr(edge_index, num_nodes):
+def edge_index_to_c_s_r(edge_index, num_nodes):
+    # Convert edge_index to a sparse matrix
     edge_index = edge_index.numpy()
     scoo = coo_matrix((np.ones_like(edge_index[0]), (edge_index[0], edge_index[1])), shape=(num_nodes, num_nodes))
     adjacency_matrix_csr = scoo.tocsr()

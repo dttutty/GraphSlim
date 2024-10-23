@@ -6,7 +6,7 @@ from graphslim.dataset.utils import save_reduced
 from graphslim.evaluation.utils import verbose_time_memory
 from graphslim.sparsification.coreset_base import CoreSet
 from graphslim.utils import normalize_adj_tensor, to_tensor
-from graphslim.dataset import *
+from graphslim.dataset import edge_index_to_c_s_r
 from graphslim.dataset.convertor import networkit_to_pyg, pyg_to_networkit
 
 
@@ -23,7 +23,7 @@ class EdgeSparsifier:
         # TODO: support edge weight
         new_edge_list, new_edge_attr = self.edge_cutter(graph)
 
-        data.adj_syn = ei2csr(new_edge_list, graph.numberOfNodes())
+        data.adj_syn = edge_index_to_c_s_r(new_edge_list, graph.numberOfNodes())
         if verbose:
             print('selected edges:', data.adj_syn.sum())
 
@@ -32,3 +32,6 @@ class EdgeSparsifier:
             save_reduced(adj_syn=data.adj_syn, args=args)
 
         return data
+
+    def edge_cutter(self, G):
+        pass

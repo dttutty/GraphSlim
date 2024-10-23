@@ -44,7 +44,7 @@ class GEOM(GCondBase):
         if args.soft_label:
             flag = True
             args.soft_label = False
-        feat_init, adj_init = self.init(with_adj=True)
+        feat_init, adj_init = self.initialize_synthetic_features(include_adjacency=True)
         if flag:
             args.soft_label = True
 

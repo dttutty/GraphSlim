@@ -12,7 +12,8 @@ from torch_geometric.typing import (OptPairTensor, Adj, Size, NoneType,
 from torch_geometric.utils import remove_self_loops, add_self_loops, softmax
 from torch_sparse import SparseTensor, set_diag, matmul
 from torch_geometric.utils import dense_to_sparse
-
+from torch_geometric.nn import GCNConv
+import torch.nn.init as init
 
 class GraphConvolution(torch.nn.Module):
 
@@ -51,9 +52,8 @@ class GraphConvolution(torch.nn.Module):
             return x
 
     def __repr__(self):
-        return self.__class__.__name__ + ' (' \
-            + str(self.in_features) + ' -> ' \
-            + str(self.out_features) + ')'
+        return f"{self.__class__.__name__} ({self.in_features} -> {self.out_features})"
+
 
 
 class GATConv(MessagePassing):

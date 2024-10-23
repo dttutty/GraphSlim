@@ -43,7 +43,7 @@ class SGDD(GCondBase):
                                               device=self.device)
 
         # initialization the features
-        feat_init = self.init()
+        feat_init = self.initialize_synthetic_features()
         self.feat_syn.data.copy_(feat_init)
 
         adj = normalize_adj_tensor(adj, sparse=True)

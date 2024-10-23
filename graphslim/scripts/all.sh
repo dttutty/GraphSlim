@@ -12,12 +12,17 @@
 #SBATCH --account wang-compbio
 
 ########## Command Lines to Run ##########
-conda init bash
-export PATH="/mnt/home/yangji73/simon/miniconda3/bin:$PATH"
-source ~/.bashrc
-conda activate pygdgl
-cd /mnt/home/yangji73/simon/GraphSlim/graphslim
+# conda init bash
+# export PATH="/mnt/home/yangji73/simon/miniconda3/bin:$PATH"
+# source ~/.bashrc
+# conda activate pygdgl
+# cd /mnt/home/yangji73/simon/GraphSlim/graphslim
 
-srun -n 1 python train_all.py -D ${1} -M ${2} -R ${3} -A ${4} -P ${5}
+if command -v srun &> /dev/null
+then
+    srun -n 1 python train_all.py -D ${1} -M ${2} -R ${3} -A ${4} -P ${5}
+else
+    python train_all.py -D ${1} -M ${2} -R ${3} -A ${4} -P ${5}
+fi
 
 #scontrol show job $SLURM_J0B_ID

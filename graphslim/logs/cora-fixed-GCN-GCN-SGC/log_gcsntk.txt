@@ -1,0 +1,88 @@
+{'K': 2,
+ 'L': 2,
+ 'activation': 'relu',
+ 'adj': False,
+ 'agg': False,
+ 'alpha': 0.1,
+ 'attack': None,
+ 'batch_adj': 1,
+ 'checkpoints': [-1, 49, 99, 149, 199, 249, 299, 349, 399, 449, 499],
+ 'coarsen_strategy': 'greedy',
+ 'condense_model': 'SGC',
+ 'dataset': 'cora',
+ 'device': 'cuda:0',
+ 'dis_metric': 'ours',
+ 'dropout': 0.0,
+ 'eigen_k': 60,
+ 'epochs': 500,
+ 'eval_epochs': 300,
+ 'eval_interval': 50,
+ 'eval_loss': 'CE',
+ 'eval_model': 'GCN',
+ 'eval_wd': 0.0,
+ 'eval_whole': False,
+ 'feat_alpha': 10,
+ 'final_eval_model': 'GCN',
+ 'gamma': 0.5,
+ 'gpu_id': 0,
+ 'hidden': 256,
+ 'init': 'random',
+ 'inner_loop': 1,
+ 'k': 2,
+ 'load_path': '../../data',
+ 'logger': <Logger graphslim.config (INFO)>,
+ 'lr': 0.01,
+ 'lr_adj': 0.0001,
+ 'lr_eigenvec': 0.01,
+ 'lr_feat': 0.0001,
+ 'method': 'gcsntk',
+ 'metric': <function accuracy at 0x7f4a91b395a0>,
+ 'multi_label': False,
+ 'mx_size': 100,
+ 'nlayers': 2,
+ 'no_buff': False,
+ 'ntrans': 1,
+ 'optim': 'Adam',
+ 'outer_loop': 10,
+ 'pre_norm': True,
+ 'ptb_r': 0.25,
+ 'ratio': 0.8,
+ 'reduction_rate': 0.5,
+ 'ridge': 1.0,
+ 'run_eval': 10,
+ 'run_inter_eval': 3,
+ 'run_reduction': 3,
+ 'save_path': '../checkpoints',
+ 'scale': 'average',
+ 'seed': 1,
+ 'setting': 'trans',
+ 'smoothness_alpha': 0.1,
+ 'soft_label': 0,
+ 'split': 'fixed',
+ 'threshold': 0.0,
+ 'ts': 4,
+ 'verbose': False,
+ 'weight_decay': 0.0,
+ 'with_bn': False,
+ 'with_structure': 1}
+train nodes num: 140
+val nodes num: 500
+test nodes num: 1000
+total nodes num: 2708
+target reduced size:70
+actual reduced size:70
+  0%|          | 0/500 [00:00<?, ?it/s]  0%|          | 1/500 [00:00<01:05,  7.57it/s]  2%|▏         | 11/500 [00:00<00:08, 54.99it/s]  4%|▍         | 22/500 [00:00<00:06, 75.27it/s]  7%|▋         | 33/500 [00:00<00:05, 85.71it/s]  9%|▉         | 44/500 [00:00<00:04, 91.52it/s] 10%|▉         | 49/500 [00:00<00:05, 78.85it/s]
+Traceback (most recent call last):
+  File "/home/sqp17/Projects/GraphSlim/graphslim/train_all.py", line 81, in <module>
+    reduced_graph = agent.reduce(graph, verbose=args.verbose)
+  File "/home/sqp17/Projects/GraphSlim/graphslim/evaluation/utils.py", line 139, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/sqp17/Projects/GraphSlim/graphslim/condensation/gcsntk.py", line 161, in reduce
+    best_val = self.intermediate_evaluation(best_val, training_loss)
+  File "/home/sqp17/Projects/GraphSlim/graphslim/condensation/gcond_base.py", line 329, in intermediate_evaluation
+    self.test_with_val(verbose=False, setting=args.setting, iters=args.eval_epochs))
+  File "/home/sqp17/Projects/GraphSlim/graphslim/condensation/gcond_base.py", line 364, in test_with_val
+    acc_val = model.fit_with_val(data,
+  File "/home/sqp17/Projects/GraphSlim/graphslim/models/base.py", line 125, in fit_with_val
+    raise NotImplementedError
+NotImplementedError

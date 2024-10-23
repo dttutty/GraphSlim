@@ -89,7 +89,7 @@ class SFGC(GCondBase):
                     trajectories = []
         # =============stage 2 trajectory alignment and GCN evaluation==================#
         # kcenter select
-        feat_init, adj_init = self.init(with_adj=True)
+        feat_init, adj_init = self.initialize_synthetic_features(include_adjacency=True)
         self.feat_syn.data.copy_(feat_init)
         labels_syn = to_tensor(label=data.labels_syn, device=self.device)
         self.adj_syn_init = adj_init

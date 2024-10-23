@@ -20,7 +20,7 @@ class MSGC(GCondBase):
         x_channels = data.feat_train.shape[1]
         edge_hidden_channels = 256
         self.n_syn = self.nnodes_syn
-        n_each_y = self.generate_labels_syn(data)
+        n_each_y = self.create_synthetic_labels(data)
         self.labels_syn = data.labels_syn = self.y_syn
         self.batch_size = args.batch_adj
         self.n_classes = data.nclass
@@ -38,7 +38,7 @@ class MSGC(GCondBase):
             nn.Linear(edge_hidden_channels, 1)
         ).to(args.device)
 
-    def generate_labels_syn(self, data):
+    def create_synthetic_labels(self, data):
         labels_train = data.labels_train.to(self.device)
         n = labels_train.shape[0]
         n_syn = self.nnodes_syn
@@ -78,7 +78,7 @@ class MSGC(GCondBase):
         basic_model = eval(args.condense_model)(self.feat_syn.shape[1], args.hidden, data.nclass, args).to(self.device)
 
         self.reset_adj_batch()
-        feat_init = self.init()
+        feat_init = self.initialize_synthetic_features()
         self.feat_syn.data.copy_(feat_init)
 
         optimizer_x = torch.optim.Adam([self.feat_syn], lr=args.lr_feat)

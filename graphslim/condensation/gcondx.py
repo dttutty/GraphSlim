@@ -26,7 +26,7 @@ class GCondX(GCondBase):
                                               device=self.device)
 
             # initialization the features
-        feat_init = self.init(with_adj=False)
+        feat_init = self.initialize_synthetic_features(include_adjacency=False)
         self.feat_syn.data.copy_(feat_init)
 
         self.adj_syn = torch.eye(feat_init.shape[0], device=self.device)

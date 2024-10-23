@@ -13,7 +13,7 @@ from graphslim.evaluation import *
 from graphslim.evaluation.utils import *
 from graphslim.models import *
 from torch_sparse import SparseTensor
-from graphslim.dataset.convertor import ei2csr
+from graphslim.dataset.convertor import edge_index_to_c_s_r
 from graphslim.utils import accuracy, seed_everything, normalize_adj_tensor, to_tensor, is_sparse_tensor, is_identity, \
     f1_macro
 
@@ -120,20 +120,13 @@ class Evaluator:
 
         if grid_search:
             gs_params = {
-                'GCN': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4],
-                        'dropout': [0.0, 0.5]},
-                'SGC': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4],
-                        'dropout': [0.0, 0.5], 'ntrans': [1, 2]},
-                'APPNP': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4],
-                          'dropout': [0.0, 0.5], 'ntrans': [1, 2], 'alpha': [0.1, 0.2]},
-                'Cheby': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4],
-                          'dropout': [0.0, 0.5]},
-                'GraphSage': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4],
-                              'dropout': [0.0, 0.5]},
-                'GAT': {'hidden': [16, 64], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4],
-                        'dropout': [0.0, 0.5, 0.7]},
-                'SGFormer': {'trans_num_layers': [1, 2, 3], 'lr': [0.01, 0.001], 'trans_weight_decay': [0.001, 0.0001],
-                             'trans_dropout': [0.0, 0.5, 0.7]}
+                'GCN': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4], 'dropout': [0.0, 0.5]},
+                'SGC': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4], 'dropout': [0.0, 0.5], 'ntrans': [1, 2]},
+                'APPNP': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4], 'dropout': [0.0, 0.5], 'ntrans': [1, 2], 'alpha': [0.1, 0.2]},
+                'Cheby': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4], 'dropout': [0.0, 0.5]},
+                'GraphSage': {'hidden': [64, 256], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4], 'dropout': [0.0, 0.5]},
+                'GAT': {'hidden': [16, 64], 'lr': [0.01, 0.001], 'weight_decay': [0, 5e-4], 'dropout': [0.0, 0.5, 0.7]},
+                'SGFormer': {'trans_num_layers': [1, 2, 3], 'lr': [0.01, 0.001], 'trans_weight_decay': [0.001, 0.0001], 'trans_dropout': [0.0, 0.5, 0.7]}
             }
 
             if args.dataset in ['reddit']:

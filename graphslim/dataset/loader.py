@@ -18,7 +18,7 @@ from torch_sparse import SparseTensor
 from dgl.data import FraudDataset
 import shutil
 
-from graphslim.dataset.convertor import ei2csr, csr2ei, from_dgl
+from graphslim.dataset.convertor import edge_index_to_c_s_r, csr2ei, from_dgl
 from graphslim.dataset.utils import splits
 from graphslim.utils import index_to_mask, to_tensor
 
@@ -147,7 +147,7 @@ class TransAndInd:
             self.y = data.y
             self.feat_full = data.x
             self.labels_full = data.y
-            self.adj_full = ei2csr(data.edge_index, data.x.shape[0])
+            self.adj_full = edge_index_to_c_s_r(data.edge_index, data.x.shape[0])
             self.edge_index = data.edge_index
             self.sparse_adj = SparseTensor.from_edge_index(data.edge_index)
         # saint format use feat,labels,adj

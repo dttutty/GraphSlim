@@ -23,7 +23,7 @@ class GCDM(GCondBase):
                                               device=self.device)
 
         # initialization the features
-        feat_init = self.init()
+        feat_init = self.initialize_synthetic_features()
         # self.reset_parameters()
         self.feat_syn.data.copy_(feat_init)
 

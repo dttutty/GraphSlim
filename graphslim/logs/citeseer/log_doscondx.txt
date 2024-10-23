@@ -1,0 +1,85 @@
+{'activation': 'relu',
+ 'agg': False,
+ 'alpha': 0.1,
+ 'attack': None,
+ 'batch_adj': 1,
+ 'checkpoints': [-1, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999],
+ 'coarsen_strategy': 'greedy',
+ 'condense_model': 'GCN',
+ 'dataset': 'citeseer',
+ 'device': 'cuda:0',
+ 'dis_metric': 'mse',
+ 'dropout': 0.0,
+ 'eigen_k': 60,
+ 'epochs': 1000,
+ 'eval_epochs': 300,
+ 'eval_interval': 100,
+ 'eval_loss': 'CE',
+ 'eval_model': 'GCN',
+ 'eval_wd': 0.0,
+ 'eval_whole': False,
+ 'feat_alpha': 10,
+ 'final_eval_model': 'GCN',
+ 'gamma': 0.5,
+ 'gpu_id': 0,
+ 'hidden': 256,
+ 'init': 'random',
+ 'inner_loop': 1,
+ 'load_path': '../../data',
+ 'logger': <Logger graphslim.config (INFO)>,
+ 'lr': 0.01,
+ 'lr_adj': 0.01,
+ 'lr_eigenvec': 0.01,
+ 'lr_feat': 0.01,
+ 'method': 'doscondx',
+ 'metric': <function accuracy at 0x7f9b4366b1c0>,
+ 'multi_label': False,
+ 'mx_size': 100,
+ 'nlayers': 2,
+ 'no_buff': False,
+ 'ntrans': 1,
+ 'optim': 'Adam',
+ 'outer_loop': 10,
+ 'pre_norm': True,
+ 'ptb_r': 0.25,
+ 'ratio': 0.8,
+ 'reduction_rate': 0.5,
+ 'run_eval': 10,
+ 'run_inter_eval': 3,
+ 'run_reduction': 3,
+ 'save_path': '../checkpoints',
+ 'seed': 1,
+ 'setting': 'trans',
+ 'smoothness_alpha': 0.1,
+ 'soft_label': 0,
+ 'split': 'fixed',
+ 'threshold': 0.0,
+ 'ts': 4,
+ 'verbose': False,
+ 'weight_decay': 0.0,
+ 'with_bn': False,
+ 'with_structure': 1}
+Saved ../checkpoints/reduced_graph/random/adj_citeseer_0.5_1.pt
+train nodes num: 120
+val nodes num: 500
+test nodes num: 1000
+total nodes num: 3327
+target reduced size:60
+actual reduced size:60
+adj_syn: (60, 60) feat_syn: torch.Size([60, 3703])
+selected nodes: 60
+induced edges: 6
+Function Time: 0.001880967989563942 s
+Function Time: 1.880967989563942 ms
+Original graph:1.70 Mb  Condensed graph:0.86 Mb
+  0%|          | 0/1000 [00:00<?, ?it/s]  0%|          | 0/1000 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/sqp17/Projects/GraphSlim/graphslim/train_all.py", line 81, in <module>
+    reduced_graph = agent.reduce(graph, verbose=args.verbose)
+  File "/home/sqp17/Projects/GraphSlim/graphslim/evaluation/utils.py", line 139, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/sqp17/Projects/GraphSlim/graphslim/condensation/doscondx.py", line 50, in reduce
+    loss = self.train_class(model, adj, features, labels, labels_syn, args)
+  File "/home/sqp17/Projects/GraphSlim/graphslim/condensation/gcond_base.py", line 243, in train_class
+    loss_syn = loss_fn(output_syn[hard_labels_syn == c], soft_labels_syn[hard_labels_syn == c])
+IndexError: The shape of the mask [3327] at index 0 does not match the shape of the indexed tensor [60, 6] at index 0

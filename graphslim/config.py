@@ -36,7 +36,7 @@ def update_from_dict(obj, updates):
 
 # fix setting here
 def setting_config(args):
-    representative_r = {
+    dataset_reduction_rates = {
         'cora': 0.5,
         'citeseer': 0.5,
         'pubmed': 0.5,
@@ -48,7 +48,7 @@ def setting_config(args):
         'pubmed': 0.1
     }
     if args.reduction_rate == -1:
-        args.reduction_rate = representative_r[args.dataset]
+        args.reduction_rate = dataset_reduction_rates.get(args.dataset, 0.1)
     if args.dataset in ['cora', 'citeseer', 'pubmed', 'ogbn-arxiv', 'pubmed']:
         args.setting = 'trans'
     if args.dataset in ['flickr', 'reddit', 'amazon','yelp']:
@@ -118,7 +118,7 @@ def method_config(args):
 @click.option('--outer_loop', default=10, show_default=True)
 @click.option('--inner_loop', default=1, show_default=True)
 @click.option('--reduction_rate', '-R', default=-1.0, show_default=True,
-              help='-1 means use representative reduction rate; reduction rate of training set, defined as (number of nodes in small graph)/(number of nodes in original graph)')
+              help='-1 means use default reduction rate; reduction rate of training set, defined as (number of nodes in small graph)/(number of nodes in original graph)')
 @click.option('--seed', '-S', default=1, help='Random seed', show_default=True)
 @click.option('--nlayers', default=2, help='number of GNN layers of condensed model', show_default=True)
 @click.option('--verbose', '-V', is_flag=True, show_default=True)
@@ -129,14 +129,14 @@ def method_config(args):
                    'affinity_GS', 'kron', 'vng', 'clustering', 'averaging',
                    'cent_d', 'cent_p', 'kcenter', 'herding', 'random']
               ), show_default=True)
-# @click.option('--method', '-M', default='kcenter',
-#               type=click.Choice(
-#                   ['variation_neighborhoods', 'variation_edges', 'variation_cliques', 'heavy_edge', 'algebraic_JC',
-#                    'affinity_GS', 'kron', 'vng', 'clustering', 'averaging',
-#                    'gcond', 'doscond', 'gcondx', 'doscondx', 'sfgc', 'msgc', 'disco', 'sgdd', 'gcsntk', 'geom','cadm',
-#                    'cent_d', 'cent_p', 'kcenter', 'herding', 'random',
-#                    'random_edge'
-#                    ]), show_default=True)
+@click.option('--method', '-M', default='kcenter',
+              type=click.Choice(
+                  ['variation_neighborhoods', 'variation_edges', 'variation_cliques', 'heavy_edge', 'algebraic_JC',
+                   'affinity_GS', 'kron', 'vng', 'clustering', 'averaging',
+                   'gcond', 'doscond', 'gcondx', 'doscondx', 'sfgc', 'msgc', 'disco', 'sgdd', 'gcsntk', 'geom','cadm',
+                   'cent_d', 'cent_p', 'kcenter', 'herding', 'random',
+                   'random_edge'
+                   ]), show_default=True)
 
 @click.option('--eval_wd', '--ewd', default=0.0, show_default=True)
 @click.option('--eval_loss', '--eloss', default='CE',
@@ -188,7 +188,7 @@ def method_config(args):
 @click.option('--lr_eigenvec', default=0.01, show_default=True, help='eigenvalue loss weight')
 @click.option('--gamma', default=0.5, show_default=True, help='eigenvalue loss weight')
 @click.pass_context
-def cli(ctx, **kwargs):
+def parse_cli_arguments(ctx, **kwargs):
     args = dict2obj(kwargs)
     if args.gpu_id >= 0:
         os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.gpu_id}"
@@ -218,8 +218,8 @@ def cli(ctx, **kwargs):
 
 
 def get_args():
-    return cli(standalone_mode=False)
+    return parse_cli_arguments(standalone_mode=False)
 
 
 if __name__ == '__main__':
-    cli()
+    parse_cli_arguments()

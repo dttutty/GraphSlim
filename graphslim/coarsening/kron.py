@@ -8,7 +8,7 @@ from torch_geometric.utils import to_dense_adj
 
 from graphslim.coarsening.utils import contract_variation_edges, contract_variation_linear, get_proximity_measure, \
     matching_optimal, matching_greedy, get_coarsening_matrix, coarsen_matrix, coarsen_vector, zero_diag
-from graphslim.dataset.convertor import pyg2gsp, csr2ei, ei2csr
+from graphslim.dataset.convertor import pyg2gsp, csr2ei, edge_index_to_c_s_r
 from graphslim.dataset.utils import save_reduced
 from graphslim.evaluation import *
 from graphslim.utils import one_hot, to_tensor

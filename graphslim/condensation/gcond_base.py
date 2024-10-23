@@ -25,6 +25,9 @@ class GCondBase:
     **kwargs : keyword arguments
         Additional arguments for initialization.
     """
+    
+    METHODS_WITHOUT_LABELS = {'msgc'}
+    METHODS_WITHOUT_PGE = {'sgdd', 'gcsntk', 'msgc'}
 
     def __init__(self, setting, data, args, **kwargs):
         """
@@ -46,36 +49,65 @@ class GCondBase:
         self.device = args.device
         self.setting = setting
 
-        if args.method not in ['msgc']:
-            self.labels_syn = self.data.labels_syn = self.generate_labels_syn(data)
+        # Initialize synthetic labels if method requires it
+        if args.method not in self.METHODS_WITHOUT_LABELS:
+            self.labels_syn = self.data.labels_syn = self.create_synthetic_labels(data)
             n = self.nnodes_syn = self.data.labels_syn.shape[0]
         else:
             n = self.nnodes_syn = int(data.feat_train.shape[0] * args.reduction_rate)
+        
+        # Set the feature dimension
         self.d = d = data.feat_train.shape[1]
-        # self.d = d = 64
+        
+        # Log reduced sizes
         print(f'target reduced size:{int(data.feat_train.shape[0] * args.reduction_rate)}')
         print(f'actual reduced size:{n}')
 
-        # from collections import Counter; print(Counter(data.labels_train))
-
+        # Initialize synthetic features as a learnable parameter
         self.feat_syn = nn.Parameter(torch.empty(n, d).to(self.device))
-        if args.method not in ['sgdd', 'gcsntk', 'msgc']:
-            self.pge = PGE(nfeat=d, nnodes=n, device=self.device, args=args).to(self.device)
+        
+        # Initialize PGE and optimizers if required by the method
+        if args.method not in self.METHODS_WITHOUT_PGE:
+            self.pge = PGE(nfeat=self.d, nnodes=self.nnodes_syn, device=self.device, args=args).to(self.device)
             self.adj_syn = None
+            self._initialize_optimizers()
+            
 
-            # self.reset_parameters()
-            self.optimizer_feat = torch.optim.Adam([self.feat_syn], lr=args.lr_feat)
-            self.optimizer_pge = torch.optim.Adam(self.pge.parameters(), lr=args.lr_adj)
-            print('adj_syn:', (n, n), 'feat_syn:', self.feat_syn.shape)
+    def _initialize_optimizers(self):
+        """Initializes optimizers for synthetic features and PGE."""
+        self.optimizer_feat = torch.optim.Adam([self.feat_syn], lr=self.args.lr_feat)
+        self.optimizer_pge = torch.optim.Adam(self.pge.parameters(), lr=self.args.lr_adj)
+        self._log(f'adj_syn: {(self.nnodes_syn, self.nnodes_syn)}, feat_syn: {self.feat_syn.shape}')
 
-    def reset_parameters(self):
+    def _log(self, message):
+        """Helper function to log messages."""
+        if self.args.verbose:
+            print(message)
+            
+    def reset_parameters(self, init_strategy='random_normal'):
         """
         Resets the parameters of the model.
+        
+        Parameters
+        ----------
+        init_strategy : str, optional
+            The initialization strategy for synthetic features ('random_normal', 'xavier', 'kaiming', etc.).
         """
-        self.feat_syn.data.copy_(torch.randn(self.feat_syn.size()))
-        self.pge.reset_parameters()
+        # Initialize synthetic features based on the chosen strategy
+        if init_strategy == 'xavier':
+            nn.init.xavier_uniform_(self.feat_syn.data)
+        elif init_strategy == 'kaiming':
+            nn.init.kaiming_uniform_(self.feat_syn.data)
+        else:
+            # Default to normal random initialization
+            self.feat_syn.data.copy_(torch.randn(self.feat_syn.size()))
 
-    def generate_labels_syn(self, data):
+        # Reset PGE parameters if PGE exists
+        if hasattr(self, 'pge') and self.pge is not None:
+            self.pge.reset_parameters()
+
+
+    def create_synthetic_labels(self, data):
         """
         Generates synthetic labels to match the target number of samples.
 
@@ -90,30 +122,55 @@ class GCondBase:
             A numpy array of synthetic labels.
         """
         counter = Counter(data.labels_train.tolist())
-        num_class_dict = {}
         n = len(data.labels_train)
-
         sorted_counter = sorted(counter.items(), key=lambda x: x[1])
-        sum_ = 0
+
+        # Calculate total number of synthetic samples and initialize storage
+        total_syn_samples = int(n * self.args.reduction_rate)
         labels_syn = []
         self.syn_class_indices = {}
-        for ix, (c, num) in enumerate(sorted_counter):
-            if ix == len(sorted_counter) - 1:
-                # only clip labels with largest number of samples
-                num_class_dict[c] = max(int(n * self.args.reduction_rate) - sum_, 1)
-                self.syn_class_indices[c] = [len(labels_syn), len(labels_syn) + num_class_dict[c]]
-                labels_syn += [c] * num_class_dict[c]
+        num_class_dict = {}
+        
+        
+        sum_ = 0
+        for ix, (class_label, num) in enumerate(sorted_counter):
+            # For all but the last class
+            if ix < len(sorted_counter) - 1:
+                num_syn = max(int(num * self.args.reduction_rate), 1)
             else:
-                num_class_dict[c] = max(int(num * self.args.reduction_rate), 1)
-                sum_ += num_class_dict[c]
-                self.syn_class_indices[c] = [len(labels_syn), len(labels_syn) + num_class_dict[c]]
-                labels_syn += [c] * num_class_dict[c]
+                # Last class takes the remaining samples
+                num_syn = max(total_syn_samples - len(labels_syn), 1)
+            # 使用独立函数更新索引和样本数
+            self._update_class_info(class_label, num_syn, labels_syn, num_class_dict)
+        
+        # Update the data object
         self.data.num_class_dict = self.num_class_dict = num_class_dict
-        if self.args.verbose:
-            print(num_class_dict)
+        self._log(f'Synthetic class distribution: {num_class_dict}')
+        
         return np.array(labels_syn)
 
-    def init(self, with_adj=False, reuse_init=False):
+
+    def _update_class_info(self, class_label, num_syn, labels_syn, num_class_dict):
+        """
+        更新每个类的索引范围和类别样本数。
+
+        Parameters
+        ----------
+        class_label : int
+            类别标签。
+        num_syn : int
+            类别的合成样本数。
+        labels_syn : list
+            存储合成标签的列表。
+        num_class_dict : dict
+            存储每个类别对应样本数的字典。
+        """
+        self.syn_class_indices[class_label] = [len(labels_syn), len(labels_syn) + num_syn]
+        labels_syn.extend([class_label] * num_syn)
+        num_class_dict[class_label] = num_syn
+
+    
+    def initialize_synthetic_features(self, include_adjacency=False, keep_init=False):
         """
         Initializes synthetic features and (optionally) adjacency matrix.
 
@@ -128,27 +185,19 @@ class GCondBase:
             A tuple containing the synthetic features and (optionally) the adjacency matrix.
         """
         args = self.args
-        if args.init == 'clustering':
-            if args.agg:
-                agent = ClusterAgg(setting=args.setting, data=self.data, args=args)
-            else:
-                agent = Cluster(setting=args.setting, data=self.data, args=args)
-        elif args.init == 'averaging':
-            agent = Average(setting=args.setting, data=self.data, args=args)
-        elif args.init == 'kcenter':
-            agent = KCenter(setting=args.setting, data=self.data, args=args)
-        elif args.init == 'herding':
-            agent = Herding(setting=args.setting, data=self.data, args=args)
-        elif args.init == 'cent_p':
-            agent = CentP(setting=args.setting, data=self.data, args=args)
-        elif args.init == 'cent_d':
-            agent = CentD(setting=args.setting, data=self.data, args=args)
-        else:
-            agent = Random(setting=args.setting, data=self.data, args=args)
+        agent_classes = {
+            'clustering': ClusterAgg if args.agg else Cluster,
+            'averaging': Average,
+            'kcenter': KCenter,
+            'herding': Herding,
+            'cent_p': CentP,
+            'cent_d': CentD
+        }
+        agent = agent_classes.get(args.init, Random)(setting=args.setting, data=self.data, args=args)
 
-        if reuse_init:
+        if keep_init:
             save_path = f'{args.save_path}/reduced_graph/{args.init}'
-            if with_adj and os.path.exists(f'{save_path}/adj_{args.dataset}_{args.reduction_rate}_{args.seed}.pt'):
+            if include_adjacency and os.path.exists(f'{save_path}/adj_{args.dataset}_{args.reduction_rate}_{args.seed}.pt'):
                 feat_syn = torch.load(
                         f'{save_path}/adj_{args.dataset}_{args.reduction_rate}_{args.seed}.pt', map_location=args.device)
                 return feat_syn, adj_syn
@@ -160,7 +209,7 @@ class GCondBase:
         args.method = args.init
         reduced_data = agent.reduce(self.data, verbose=True, save=True)
         args.method = temp
-        if with_adj:
+        if include_adjacency:
             return reduced_data.feat_syn, reduced_data.adj_syn
         else:
             return reduced_data.feat_syn
@@ -302,16 +351,7 @@ class GCondBase:
     def intermediate_evaluation(self, best_val, loss_avg=None, save=True, save_valid_acc=False):
         """
         Performs intermediate evaluation and saves the best model.
-
-        Parameters
-        ----------
-        best_val : float
-            The best validation accuracy observed so far.
-        loss_avg : float
-            The average loss.
-        save : bool, optional
-            Whether to save the model (default is True).
-
+ 
         Returns
         -------
         float
@@ -342,15 +382,6 @@ class GCondBase:
         """
         Conducts validation testing and returns results.
 
-        Parameters
-        ----------
-        verbose : bool, optional
-            Whether to print verbose output (default is False).
-        setting : str, optional
-            The setting type (default is 'trans').
-        iters : int, optional
-            Number of iterations for validation testing (default is 200).
-
         Returns
         -------
         list
@@ -359,15 +390,53 @@ class GCondBase:
 
         args, data, device = self.args, self.data, self.device
 
-        model = eval(args.final_eval_model)(data.feat_syn.shape[1], args.hidden, data.nclass, args, mode='eval').to(device)
+        # Initialize model
+        model = self._initialize_model(args.final_eval_model, data.feat_syn.shape[1], args.hidden, data.nclass, args).to(device)
 
-        acc_val = model.fit_with_val(data,
-                                     train_iters=iters, normadj=True, verbose=False,
-                                     setting=setting, reduced=True, best_val=best_val)
+        # Train with validation
+        acc_val = self._train_model_with_val(model, data, iters, setting, best_val)
 
-        model.eval()
-        acc_test = model.test(data, setting=setting,verbose=False)
-        # if verbose:
-        #     print('Val Accuracy and Std:',
-        #           repr([res.mean(0), res.std(0)]))
+        # Test model performance
+        acc_test = self._test_model(model, data, setting)
+
+        if verbose:
+            self._log_results(acc_val, acc_test)
+        
         return [acc_val, acc_test]
+
+    def _train_model_with_val(self, model, data, iters, setting, best_val):
+        """
+        Trains the model and performs validation. 
+        
+        Returns
+        -------
+        float
+            The validation accuracy after training.
+        """
+        return model.fit_with_val(data, train_iters=iters, normadj=True, verbose=False, setting=setting, reduced=True, best_val=best_val)
+
+    def _log_results(self, acc_val, acc_test):
+        print(f"Validation Accuracy: {acc_val}")
+        print(f"Test Accuracy: {acc_test}")
+
+    def _test_model(self, model, data, setting):
+        """
+        Tests the model performance. 
+
+        Returns
+        -------
+        float
+            The test accuracy.
+        """
+        model.eval()
+        return model.test(data, setting=setting, verbose=False)
+
+    def _initialize_model(self, model_name, input_dim, hidden_dim, output_dim, args):
+        """
+        Initializes the model based on the provided model name.
+        """
+        try:
+            model_class = getattr(__import__('models', fromlist=[model_name]), model_name)
+        except AttributeError:
+            raise ValueError(f"Model '{model_name}' not found.")
+        return model_class(input_dim, hidden_dim, output_dim, args, mode='eval')

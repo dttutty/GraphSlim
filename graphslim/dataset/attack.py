@@ -43,13 +43,13 @@ def attack(data, args):
                     model = PRBCD(data, device=args.device)
                     # ignore the test results!
                     edge_index, _ = model.attack(ptb_rate=args.ptb_r)
-                    data.adj_train = ei2csr(edge_index.cpu(), data.num_nodes)[np.ix_(data.idx_train, data.idx_train)]
+                    data.adj_train = edge_index_to_c_s_r(edge_index.cpu(), data.num_nodes)[np.ix_(data.idx_train, data.idx_train)]
                     sp.save_npz(f'{save_path}/adj_{args.dataset}_{args.attack}_{args.ptb_r}_{args.seed}.npz',
                                 data.adj_train)
                 else:
                     model = PRBCD(data, device=args.device)
                     data.edge_index, _ = model.attack(data.edge_index, ptb_rate=args.ptb_r)
-                    data.adj_full = ei2csr(data.edge_index.cpu(), data.num_nodes)
+                    data.adj_full = edge_index_to_c_s_r(data.edge_index.cpu(), data.num_nodes)
                     sp.save_npz(f'{save_path}/adj_{args.dataset}_{args.attack}_{args.ptb_r}_{args.seed}.npz',
                                 data.adj_full)
             elif args.attack == 'random_adj':

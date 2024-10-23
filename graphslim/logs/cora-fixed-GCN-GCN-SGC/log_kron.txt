@@ -1,0 +1,73 @@
+{'activation': 'relu',
+ 'agg': False,
+ 'alpha': 0.1,
+ 'attack': None,
+ 'batch_adj': 1,
+ 'checkpoints': [-1, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999],
+ 'coarsen_strategy': 'greedy',
+ 'condense_model': 'SGC',
+ 'dataset': 'cora',
+ 'device': 'cuda:0',
+ 'dis_metric': 'ours',
+ 'dropout': 0.0,
+ 'eigen_k': 60,
+ 'epochs': 1000,
+ 'eval_epochs': 300,
+ 'eval_interval': 100,
+ 'eval_loss': 'CE',
+ 'eval_model': 'GCN',
+ 'eval_wd': 0.0,
+ 'eval_whole': False,
+ 'feat_alpha': 10,
+ 'final_eval_model': 'GCN',
+ 'gamma': 0.5,
+ 'gpu_id': 0,
+ 'hidden': 256,
+ 'init': 'random',
+ 'inner_loop': 1,
+ 'load_path': '../../data',
+ 'logger': <Logger graphslim.config (INFO)>,
+ 'lr': 0.01,
+ 'lr_adj': 0.0001,
+ 'lr_eigenvec': 0.01,
+ 'lr_feat': 0.0001,
+ 'method': 'kron',
+ 'metric': <function accuracy at 0x7feba55315a0>,
+ 'multi_label': False,
+ 'mx_size': 100,
+ 'nlayers': 2,
+ 'no_buff': False,
+ 'ntrans': 1,
+ 'optim': 'Adam',
+ 'outer_loop': 10,
+ 'pre_norm': True,
+ 'ptb_r': 0.25,
+ 'ratio': 0.8,
+ 'reduction_rate': 0.5,
+ 'run_eval': 10,
+ 'run_inter_eval': 3,
+ 'run_reduction': 3,
+ 'save_path': '../checkpoints',
+ 'seed': 1,
+ 'setting': 'trans',
+ 'smoothness_alpha': 0.1,
+ 'soft_label': 0,
+ 'split': 'fixed',
+ 'threshold': 0.0,
+ 'ts': 4,
+ 'verbose': False,
+ 'weight_decay': 0.0,
+ 'with_bn': False,
+ 'with_structure': 1}
+Saved ../checkpoints/reduced_graph/kron/adj_cora_0.5_1.pt
+No config file found or error in json format, please use method_config(args)
+train nodes num: 140
+val nodes num: 500
+test nodes num: 1000
+total nodes num: 2708
+the number of subgraphs is 78
+1243
+1258
+Evaluating reduced data using GCN
+  0%|          | 0/10 [00:00<?, ?it/s]  0%|          | 0/10 [00:00<?, ?it/s, test_acc=0.65] 10%|█         | 1/10 [00:00<00:02,  3.92it/s, test_acc=0.65] 10%|█         | 1/10 [00:00<00:02,  3.92it/s, test_acc=0.567] 20%|██        | 2/10 [00:00<00:01,  4.93it/s, test_acc=0.567] 20%|██        | 2/10 [00:00<00:01,  4.93it/s, test_acc=0.737] 30%|███       | 3/10 [00:00<00:01,  5.22it/s, test_acc=0.737] 30%|███       | 3/10 [00:00<00:01,  5.22it/s, test_acc=0.596] 40%|████      | 4/10 [00:00<00:01,  5.53it/s, test_acc=0.596] 40%|████      | 4/10 [00:00<00:01,  5.53it/s, test_acc=0.62]  50%|█████     | 5/10 [00:00<00:00,  5.71it/s, test_acc=0.62] 50%|█████     | 5/10 [00:01<00:00,  5.71it/s, test_acc=0.584] 60%|██████    | 6/10 [00:01<00:00,  5.81it/s, test_acc=0.584] 60%|██████    | 6/10 [00:01<00:00,  5.81it/s, test_acc=0.576] 70%|███████   | 7/10 [00:01<00:00,  5.90it/s, test_acc=0.576] 70%|███████   | 7/10 [00:01<00:00,  5.90it/s, test_acc=0.636] 80%|████████  | 8/10 [00:01<00:00,  5.82it/s, test_acc=0.636] 80%|████████  | 8/10 [00:01<00:00,  5.82it/s, test_acc=0.535] 90%|█████████ | 9/10 [00:01<00:00,  5.70it/s, test_acc=0.535] 90%|█████████ | 9/10 [00:01<00:00,  5.70it/s, test_acc=0.629]100%|██████████| 10/10 [00:01<00:00,  5.78it/s, test_acc=0.629]100%|██████████| 10/10 [00:01<00:00,  5.60it/s, test_acc=0.629]
+Seed:1, Test Mean Accuracy: 61.30 +/- 5.32

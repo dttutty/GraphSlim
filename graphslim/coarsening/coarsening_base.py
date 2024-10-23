@@ -8,7 +8,7 @@ from torch_geometric.utils import to_dense_adj
 
 from graphslim.coarsening.utils import contract_variation_edges, contract_variation_linear, get_proximity_measure, \
     matching_optimal, matching_greedy, get_coarsening_matrix, coarsen_matrix, coarsen_vector, zero_diag
-from graphslim.dataset.convertor import pyg2gsp, csr2ei, ei2csr
+from graphslim.dataset.convertor import pyg2gsp, csr2ei, edge_index_to_c_s_r
 from graphslim.dataset.utils import save_reduced
 from graphslim.evaluation import *
 from graphslim.utils import one_hot, to_tensor
@@ -86,16 +86,17 @@ class Coarsen:
         # device = self.device
 
         cpu_data = copy.deepcopy(data)
-
+        
+        # 图简化的具体流程，根据不同的设置调用不同的方法
         if args.setting == 'trans':
             gps_graph = graphs.Graph(W=data.adj_full)
             candidate, C_list, Gc_list = self.coarsening(gps_graph)
             coarsen_features, coarsen_train_labels, coarsen_train_mask, coarsen_edge = self.process_coarsened(
                 cpu_data, candidate, C_list, Gc_list)
-
+            # 选择简化后的特定部分
             train_idx = np.nonzero(coarsen_train_mask.numpy())[0]
             coarsen_features = coarsen_features[train_idx]
-            coarsen_edge = ei2csr(coarsen_edge, coarsen_train_mask.shape[0])[np.ix_(train_idx, train_idx)]
+            coarsen_edge = edge_index_to_c_s_r(coarsen_edge, coarsen_train_mask.shape[0])[np.ix_(train_idx, train_idx)]
             coarsen_train_labels = coarsen_train_labels[train_idx]
         else:
             gps_graph = graphs.Graph(W=data.adj_full)
@@ -103,8 +104,9 @@ class Coarsen:
             coarsen_features, coarsen_train_labels, coarsen_train_mask, coarsen_edge = self.process_coarsened(
                 cpu_data, candidate, C_list, Gc_list)
 
-            coarsen_edge = ei2csr(coarsen_edge, coarsen_train_mask.shape[0])
+            coarsen_edge = edge_index_to_c_s_r(coarsen_edge, coarsen_train_mask.shape[0])
 
+        # 更新数据中的简化图信息
         data.adj_syn, data.feat_syn, data.labels_syn = to_tensor(coarsen_edge), coarsen_features, coarsen_train_labels
         if save:
             save_reduced(data.adj_syn, data.feat_syn, data.labels_syn, args)
@@ -139,7 +141,7 @@ class Coarsen:
         graphs = []
 
         visited = np.zeros(H.A.shape[-1], dtype=bool)
-
+        # 图的遍历，用于找到所有的子图
         while not visited.all():
             stack = set([np.nonzero(~visited)[0][0]])
             comp = []
@@ -197,6 +199,7 @@ class Coarsen:
         coarsen_edge : torch.Tensor
             The coarsened edges.
         """
+        # 提取训练数据
         train_mask = data.train_mask
         val_mask = data.val_mask
 
@@ -256,11 +259,13 @@ class Coarsen:
 
             number += 1
 
+        # 生成简化后的图的边信息
         coarsen_edge = torch.from_numpy(np.array([coarsen_row, coarsen_col])).long()
         coarsen_train_labels = coarsen_train_labels.long()
 
         return coarsen_features, coarsen_train_labels, coarsen_train_mask, coarsen_edge
 
+    # 留给后面的子类实现
     def coarsen(self, G):
         """
         This function provides a common interface for coarsening algorithms that contract subgraphs.

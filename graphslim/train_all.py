@@ -12,70 +12,46 @@ from graphslim.condensation import *
 from graphslim.coarsening import *
 from graphslim.utils import to_camel_case, seed_everything
 
+
+method_map = {
+    'kcenter': (KCenter, KCenterAgg),
+    'herding': (Herding, HerdingAgg),
+    'random': (Random, None),
+    'cent_p': (CentP, None),
+    'cent_d': (CentD, None),
+    'simgc': (SimGC, None),
+    'gcond': (GCond, None),
+    'doscond': (DosCond, None),
+    'doscondx': (DosCondX, None),
+    'gcondx': (GCondX, None),
+    'sfgc': (SFGC, None),
+    'sgdd': (SGDD, None),
+    'gcsntk': (GCSNTK, None),
+    'msgc': (MSGC, None),
+    'geom': (GEOM, None),
+    'vng': (VNG, None),
+    'clustering': (Cluster, ClusterAgg),
+    'averaging': (Average, None),
+    'gcdm': (GCDM, None),
+    'gcdmx': (GCDMX, None),
+    'gdem': (GDEM, None),
+    'variation_edges': (VariationEdges, None),
+    'variation_neighborhoods': (VariationNeighborhoods, None),
+    'algebraic_JC': (AlgebraicJc, None),
+    'affinity_GS': (AffinityGs, None),
+    't_spanner': (TSpanner, None)
+}
+
 if __name__ == '__main__':
     args = get_args()
     graph = get_dataset(args.dataset, args, args.load_path)
     seed_everything(args.seed)
     if args.attack is not None:
         data = attack(graph, args)
-    if args.method == 'kcenter' and not args.agg:
-        agent = KCenter(setting=args.setting, reduction_rate=args.reduction_rate, data=graph, args=args)
-    elif args.method == 'kcenter' and args.agg:
-        agent = KCenterAgg(setting=args.setting, data=graph, args=args)
-    elif args.method == 'herding' and not args.agg:
-        agent = Herding(setting=args.setting, data=graph, args=args)
-    elif args.method == 'herding' and args.agg:
-        agent = HerdingAgg(setting=args.setting, data=graph, args=args)
-    elif args.method == 'random':
-        agent = Random(setting=args.setting, data=graph, args=args)
-    elif args.method == 'cent_p':
-        agent = CentP(setting=args.setting, data=graph, args=args)
-    elif args.method == 'cent_d':
-        agent = CentD(setting=args.setting, data=graph, args=args)
-    elif args.method == 'simgc':
-        agent = SimGC(setting=args.setting, data=graph, args=args)
-    elif args.method == 'gcond':
-        agent = GCond(setting=args.setting, data=graph, args=args)
-    elif args.method == 'doscond':
-        agent = DosCond(setting=args.setting, data=graph, args=args)
-    elif args.method in ['doscondx']:
-        agent = DosCondX(setting=args.setting, data=graph, args=args)
-    elif args.method in ['gcondx']:
-        agent = GCondX(setting=args.setting, data=graph, args=args)
-    elif args.method == 'sfgc':
-        agent = SFGC(setting=args.setting, data=graph, args=args)
-    elif args.method == 'sgdd':
-        agent = SGDD(setting=args.setting, data=graph, args=args)
-    elif args.method == 'gcsntk':
-        agent = GCSNTK(setting=args.setting, data=graph, args=args)
-    elif args.method == 'msgc':
-        agent = MSGC(setting=args.setting, data=graph, args=args)
-    elif args.method == 'geom':
-        agent = GEOM(setting=args.setting, data=graph, args=args)
-    elif args.method == 'vng':
-        agent = VNG(setting=args.setting, data=graph, args=args)
-    elif args.method == 'clustering' and not args.agg:
-        agent = Cluster(setting=args.setting, data=graph, args=args)
-    elif args.method == 'clustering' and args.agg:
-        agent = ClusterAgg(setting=args.setting, data=graph, args=args)
-    elif args.method == 'averaging':
-        agent = Average(setting=args.setting, data=graph, args=args)
-    elif args.method == 'gcdm':
-        agent = GCDM(setting=args.setting, data=graph, args=args) #currently the code is same as GCDMX
-    elif args.method == 'gcdmx':
-        agent = GCDMX(setting=args.setting, data=graph, args=args)
-    elif args.method == 'gdem':
-        agent = GDEM(setting=args.setting, data=graph, args=args)
-    elif args.method == 'variation_edges':
-        agent = VariationEdges(setting=args.setting, data=graph, args=args)
-    elif args.method == 'variation_neighborhoods':
-        agent = VariationNeighborhoods(setting=args.setting, data=graph, args=args)
-    elif args.method == 'algebraic_JC':
-        agent = AlgebraicJc(setting=args.setting, data=graph, args=args)
-    elif args.method == 'affinity_GS':
-        agent = AffinityGs(setting=args.setting, data=graph, args=args)
-    elif args.method == 't_spanner':
-        agent = TSpanner(setting=args.setting, data=graph, args=args)
+
+    if args.method in method_map:
+        agent_class = method_map[args.method][1] if args.agg and method_map[args.method][1] else method_map[args.method][0]
+        agent = agent_class(setting=args.setting, data=graph, args=args)
     else:
         agent = eval(to_camel_case(args.method))(setting=args.setting, data=graph, args=args)
     reduced_graph = agent.reduce(graph, verbose=args.verbose)
