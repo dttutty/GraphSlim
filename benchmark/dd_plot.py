@@ -51,7 +51,7 @@ def graph_property(adj, feat, label):
 
 if __name__ == '__main__':
 
-    args = cli(standalone_mode=False)
+    args = parse_cli_arguments(standalone_mode=False)
 
     args.device = 'cpu'
     graph = get_dataset(args.dataset, args)

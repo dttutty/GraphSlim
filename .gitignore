@@ -2,3 +2,9 @@
 /graphslim.egg-info/
 *.log
 *.out
+graphslim/logs/*
+graphslim/images/*
+checkpoints/*
+images/
+*.pt
+graphslim/sfgc_buffet/*

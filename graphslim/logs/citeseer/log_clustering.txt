@@ -1,70 +1,0 @@
-{'activation': 'relu',
- 'agg': False,
- 'alpha': 0.1,
- 'attack': None,
- 'batch_adj': 1,
- 'checkpoints': [-1, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999],
- 'coarsen_strategy': 'greedy',
- 'condense_model': 'SGC',
- 'dataset': 'citeseer',
- 'device': 'cuda:0',
- 'dis_metric': 'ours',
- 'dropout': 0.0,
- 'eigen_k': 60,
- 'epochs': 1000,
- 'eval_epochs': 300,
- 'eval_interval': 100,
- 'eval_loss': 'CE',
- 'eval_model': 'GCN',
- 'eval_wd': 0.0,
- 'eval_whole': False,
- 'feat_alpha': 10,
- 'final_eval_model': 'GCN',
- 'gamma': 0.5,
- 'gpu_id': 0,
- 'hidden': 256,
- 'init': 'random',
- 'inner_loop': 1,
- 'load_path': '../../data',
- 'logger': <Logger graphslim.config (INFO)>,
- 'lr': 0.01,
- 'lr_adj': 0.0001,
- 'lr_eigenvec': 0.01,
- 'lr_feat': 0.0001,
- 'method': 'clustering',
- 'metric': <function accuracy at 0x7f4ffbb5f1c0>,
- 'multi_label': False,
- 'mx_size': 100,
- 'nlayers': 2,
- 'no_buff': False,
- 'ntrans': 1,
- 'optim': 'Adam',
- 'outer_loop': 10,
- 'pre_norm': True,
- 'ptb_r': 0.25,
- 'ratio': 0.8,
- 'reduction_rate': 0.5,
- 'run_eval': 10,
- 'run_inter_eval': 3,
- 'run_reduction': 3,
- 'save_path': '../checkpoints',
- 'seed': 1,
- 'setting': 'trans',
- 'smoothness_alpha': 0.1,
- 'soft_label': 0,
- 'split': 'fixed',
- 'threshold': 0.0,
- 'ts': 4,
- 'verbose': False,
- 'weight_decay': 0.0,
- 'with_bn': False,
- 'with_structure': 1}
-Saved ../checkpoints/reduced_graph/clustering/adj_citeseer_0.5_1.pt
-No config file found or error in json format, please use method_config(args)
-train nodes num: 120
-val nodes num: 500
-test nodes num: 1000
-total nodes num: 3327
-Evaluating reduced data using GCN
-  0%|          | 0/10 [00:00<?, ?it/s]  0%|          | 0/10 [00:00<?, ?it/s, test_acc=0.701] 10%|█         | 1/10 [00:00<00:02,  3.18it/s, test_acc=0.701] 10%|█         | 1/10 [00:00<00:02,  3.18it/s, test_acc=0.695] 20%|██        | 2/10 [00:00<00:02,  3.99it/s, test_acc=0.695] 20%|██        | 2/10 [00:00<00:02,  3.99it/s, test_acc=0.69]  30%|███       | 3/10 [00:00<00:01,  4.39it/s, test_acc=0.69] 30%|███       | 3/10 [00:00<00:01,  4.39it/s, test_acc=0.692] 40%|████      | 4/10 [00:00<00:01,  4.49it/s, test_acc=0.692] 40%|████      | 4/10 [00:01<00:01,  4.49it/s, test_acc=0.697] 50%|█████     | 5/10 [00:01<00:01,  4.58it/s, test_acc=0.697] 50%|█████     | 5/10 [00:01<00:01,  4.58it/s, test_acc=0.69]  60%|██████    | 6/10 [00:01<00:00,  4.71it/s, test_acc=0.69] 60%|██████    | 6/10 [00:01<00:00,  4.71it/s, test_acc=0.692] 70%|███████   | 7/10 [00:01<00:00,  4.65it/s, test_acc=0.692] 70%|███████   | 7/10 [00:01<00:00,  4.65it/s, test_acc=0.695] 80%|████████  | 8/10 [00:01<00:00,  4.75it/s, test_acc=0.695] 80%|████████  | 8/10 [00:01<00:00,  4.75it/s, test_acc=0.691] 90%|█████████ | 9/10 [00:01<00:00,  4.82it/s, test_acc=0.691] 90%|█████████ | 9/10 [00:02<00:00,  4.82it/s, test_acc=0.687]100%|██████████| 10/10 [00:02<00:00,  4.87it/s, test_acc=0.687]100%|██████████| 10/10 [00:02<00:00,  4.61it/s, test_acc=0.687]
-Seed:1, Test Mean Accuracy: 69.30 +/- 0.38

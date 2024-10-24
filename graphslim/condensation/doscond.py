@@ -31,7 +31,7 @@ class DosCond(GCondBase):
         self.feat_syn.data.copy_(feat_init)
         adj = normalize_adj_tensor(adj, sparse=is_sparse_tensor(adj))
 
-        outer_loop, inner_loop = self.get_loops(args)
+        outer_loop, inner_loop = args.outer_loop, args.inner_loop
         loss_avg = 0
         best_val = 0
 

@@ -17,7 +17,7 @@ Original file is located at
 import sys
 import torch
 
-from graphslim.config import cli
+from graphslim.config import parse_cli_arguments
 from graphslim.config import method_config
 from graphslim.dataset import get_dataset
 from graphslim.evaluation import Evaluator
@@ -30,7 +30,7 @@ from graphslim.sparsification import KCenter
 """### Get Config"""
 
 sys.argv = ['']
-args = cli(standalone_mode=False)
+args = parse_cli_arguments(standalone_mode=False)
 args.method='kcenter'
 args=method_config(args)
 args
@@ -53,7 +53,7 @@ print('\nTest Mean Result:', res[0], '+/-', res[1])
 """### Example 2: Reduce Graph using **GCond** Agent"""
 
 sys.argv = ['']
-args = cli(standalone_mode=False)
+args = parse_cli_arguments(standalone_mode=False)
 args.method = 'gcond'
 args.dataset = 'cora'
 args = method_config(args)

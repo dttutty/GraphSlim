@@ -33,7 +33,7 @@ class GCondX(GCondBase):
 
         adj = normalize_adj_tensor(adj, sparse=True)
 
-        outer_loop, inner_loop = self.get_loops(args)
+        outer_loop, inner_loop = args.outer_loop, args.inner_loop
         loss_avg = 0
         best_val = 0
 

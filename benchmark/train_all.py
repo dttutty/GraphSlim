@@ -5,7 +5,7 @@ if os.path.abspath('..') not in sys.path:
     sys.path.append(os.path.abspath('..'))
 import numpy as np
 
-from graphslim.config import cli
+from graphslim.config import parse_cli_arguments
 from graphslim.dataset import *
 from graphslim.evaluation import *
 from graphslim.sparsification import *
@@ -13,7 +13,7 @@ from graphslim.condensation import *
 from graphslim.coarsening import *
 
 if __name__ == '__main__':
-    args = cli(standalone_mode=False)
+    args = parse_cli_arguments(standalone_mode=False)
     graph = get_dataset(args.dataset, args)
     if args.attack is not None:
         if args.setting == 'ind':

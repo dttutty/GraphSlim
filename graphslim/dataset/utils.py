@@ -94,7 +94,26 @@ def index2mask(index, size):
     return mask
 
 
-def splits(data, exp='default'):
+def split_dataset(data, exp='default'):
+    """
+    Splits the dataset into training, validation, and test sets based on the specified experiment type.
+
+    Parameters:
+    data (object): The dataset object which should contain attributes like 'y' or 'labels_full' and 'num_nodes'.
+    exp (str): The type of split to perform. Options are:
+        - 'default': Uses an 80/10/10 split class-wise.
+        - 'random': Uses a fixed number of 20/30/remaining split class-wise.
+        - 'few': Uses a fixed number of 5/5/remaining split class-wise.
+
+    Returns:
+    object: The dataset object with additional attributes:
+        - train_mask: A mask indicating the training nodes.
+        - val_mask: A mask indicating the validation nodes.
+        - test_mask: A mask indicating the test nodes.
+        - idx_train: Indices of the training nodes.
+        - idx_val: Indices of the validation nodes.
+        - idx_test: Indices of the test nodes.
+    """
     # customize your split here
     if hasattr(data, 'y'):
         num_classes = max(data.y) + 1

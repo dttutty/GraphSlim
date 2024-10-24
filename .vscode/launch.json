@@ -2,14 +2,41 @@
     "version": "0.2.0",
     "configurations": [
       {
-        "name": "Python: 当前文件",
+        "name": "Train with Dataset",
         "type": "debugpy",
         "request": "launch",
-        "program": "${file}",
+        "program": "${workspaceFolder}/graphslim/train_all.py",
+        "args": ["--dataset", "${input:datasetSelection}", "--method", "${input:methodSelection}"],
         "console": "integratedTerminal",
-        "justMyCode": false,  // 允许进入模块内代码
-        "stopOnEntry": false, // 允许程序启动后暂停在入口处
+        "justMyCode": false,
+        "cwd": "${workspaceFolder}/graphslim"
       }
-    ]
+        ],
+        "inputs": [
+      {
+        "id": "datasetSelection",
+        "type": "pickString",
+        "description": "Select the dataset",
+        "options": [
+          "cora", "citeseer", "cora_ml", "dblp", "pubmed", "photo", "computers", "cs", 
+          "reddit", "flickr", "yelp", "ogbn-arxiv", "ogbn-products", "ogbn-proteins", 
+          "ogbn-papers100M", "amazon"
+        ],
+        "default": "cora"
+      },
+      {
+        "id": "methodSelection",
+        "type": "pickString",
+        "description": "Select the method",
+        "options": [
+          "variation_neighborhoods", "variation_edges", "variation_cliques", "heavy_edge",
+          "algebraic_JC", "affinity_GS", "kron", "vng", "clustering", "averaging", "gcond", "doscond", 
+          "gcondx", "doscondx", "sfgc", "msgc", "disco", "sgdd", "gcsntk", "geom", "cadm", 
+          "cent_d", "cent_p", "kcenter", "herding", "random", "random_edge", "tspanner"
+        ],
+        "default": "variation_neighborhoods"
+      }
+        ]
+    
   }
   

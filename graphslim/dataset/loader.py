@@ -17,74 +17,164 @@ from torch_geometric.utils import to_undirected, add_self_loops
 from torch_sparse import SparseTensor
 from dgl.data import FraudDataset
 import shutil
+import gdown
 
 from graphslim.dataset.convertor import edge_index_to_c_s_r, csr2ei, from_dgl
-from graphslim.dataset.utils import splits
+from graphslim.dataset.utils import split_dataset
 from graphslim.utils import index_to_mask, to_tensor
 
 
 def get_dataset(name='cora', args=None, load_path='../../data'):
     path = osp.join(load_path)
+    
     # Create a dictionary that maps standard names to normalized names
     standard_names = ['flickr', 'reddit', 'dblp', 'cora_ml', 'physics', 'cs', 'cora', 'citeseer', 'pubmed', 'photo',
-                      'computers', 'ogbn-products', 'ogbn-proteins', 'ogbn-papers100m', 'ogbn-arxiv', 'yelp', 'amazon']
-    normalized_names = [name.lower().replace('-', '').replace('_', '') for name in standard_names]
+                      'computers', 'ogbn-products', 'ogbn-proteins', 'ogbn-papers100M', 'ogbn-arxiv', 'yelp', 'amazon']
+    normalized_names = [name.replace('-', '').replace('_', '') for name in standard_names]
     name_dict = dict(zip(normalized_names, standard_names))
 
     # Normalize the name input
-    normalized_name = name.lower().replace('-', '').replace('_', '')
+    normalized_name = name.replace('-', '').replace('_', '')
 
-    if normalized_name in name_dict:
-        name = name_dict[normalized_name]  # Transfer to standard name
-        if name in ['flickr']:
-            dataset = Flickr(root=path + '/flickr')
-        elif name in ['reddit']:
-            dataset = Reddit2(root=path + '/reddit')
-        elif name in ['dblp', 'cora_ml', 'cora_full', 'citeseer_full']:
-            dataset = CitationFull(root=path, name=name)
-        elif name in ['physics', 'cs']:
-            dataset = Coauthor(root=path, name=name)
-        elif name in ['cora', 'citeseer', 'pubmed']:
-            dataset = Planetoid(root=path, name=name)
-        elif name in ['photo', 'computers']:
-            dataset = Amazon(root=path, name=name)
-        elif name in ['ogbn-arxiv']:
-            dataset = DataGraphSAINT(root=path, dataset=name)
-            dataset.num_classes = 40
-        elif name in ['ogbn-products', 'ogbn-proteins', 'ogbn-papers100m']:
-            dataset = PygNodePropPredDataset(name, root=path)
-        elif name in ['yelp', 'amazon']:
-            # dataset = pickle.load(open(f'{path}/{args.dataset}.dat', 'rb'))
-            # dataset.num_classes = 2
-            dataset = FraudDataset(name, raw_dir=path)
-            dataset = from_dgl(dataset[0], name=name, hetero=False)  # dgl2pyg
-    else:
+
+    if normalized_name not in name_dict:
         raise ValueError("Dataset name not recognized.")
-
+    
+    name = name_dict[normalized_name]  # 转换为标准名称
+    dataset = load_dataset_by_name(name, path)
+    
     try:
         data = dataset[0]
-
-    except:
+    except KeyError:
         data = dataset
 
-    # pyg2TransAndInd: add splits
-    data = splits(data, args.split)
+    # 添加分割信息
+    data = split_dataset(data, args.split)
 
-    data = TransAndInd(data, name, args.pre_norm)
+    # 进行TransAndInd处理
+    data = TransductiveAndInductive(data, name, args.pre_norm)
 
+    # 设置类数量
     try:
         data.nclass = dataset.num_classes
-    except:
+    except AttributeError:
         data.nclass = data.num_classes
 
+    # 输出节点信息
+    print_node_info(data)
+    return data
+
+
+def load_dataset_by_name(name, path):
+    """根据数据集名称加载不同的数据集"""
+    if name == 'flickr':
+        return Flickr(root=osp.join(path, 'flickr'))
+    elif name == 'reddit':
+        return Reddit2(root=osp.join(path, 'reddit'))
+    elif name in ['dblp', 'cora_ml', 'cora_full', 'citeseer_full']:
+        return CitationFull(root=path, name=name)
+    elif name in ['physics', 'cs']:
+        return Coauthor(root=path, name=name)
+    elif name in ['cora', 'citeseer', 'pubmed']:
+        return Planetoid(root=path, name=name)
+    elif name in ['photo', 'computers']:
+        return Amazon(root=path, name=name)
+    elif name == 'ogbn-arxiv':
+        dataset = DataGraphSAINT(root=path, dataset=name)
+        dataset.num_classes = 40
+        return dataset
+    elif name in ['ogbn-products', 'ogbn-proteins', 'ogbn-papers100M']:
+        return PygNodePropPredDataset(name, root=path)
+    elif name in ['yelp', 'amazon']:
+        # dataset = pickle.load(open(f'{path}/{args.dataset}.dat', 'rb'))
+        # dataset.num_classes = 2
+        dataset = FraudDataset(name, raw_dir=path)
+        return from_dgl(dataset[0], name=name, hetero=False)  # dgl2pyg
+    else:
+        raise ValueError(f"Unsupported dataset: {name}")
+
+def print_node_info(data):
+    """打印训练、验证、测试集的节点数量信息"""
     print("train nodes num:", sum(data.train_mask).item())
     print("val nodes num:", sum(data.val_mask).item())
     print("test nodes num:", sum(data.test_mask).item())
     print("total nodes num:", data.x.shape[0])
-    return data
 
+class TransductiveAndInductive:
+    """
+    A class to handle data transformation and indexing for graph-based datasets.
 
-class TransAndInd:
+    Attributes:
+    -----------
+    class_dict : dict or None
+        Dictionary to store class-wise training data indices.
+    samplers : list or None
+        List of NeighborSampler objects for each class.
+    class_dict2 : dict or None
+        Dictionary to store class-wise indices for sampling during training.
+    sparse_adj : SparseTensor or None
+        Sparse adjacency matrix.
+    adj_full : csr_matrix or None
+        Full adjacency matrix.
+    feat_full : torch.Tensor or None
+        Full feature matrix.
+    labels_full : torch.Tensor or None
+        Full labels.
+    num_nodes : int
+        Number of nodes in the dataset.
+    train_mask : torch.Tensor
+        Mask for training data.
+    val_mask : torch.Tensor
+        Mask for validation data.
+    test_mask : torch.Tensor
+        Mask for test data.
+    edge_index : torch.Tensor
+        Edge indices.
+    idx_train : torch.Tensor
+        Indices for training data.
+    idx_val : torch.Tensor
+        Indices for validation data.
+    idx_test : torch.Tensor
+        Indices for test data.
+    adj_train : csr_matrix
+        Adjacency matrix for training data.
+    adj_val : csr_matrix
+        Adjacency matrix for validation data.
+    adj_test : csr_matrix
+        Adjacency matrix for test data.
+    labels_train : torch.Tensor
+        Labels for training data.
+    labels_val : torch.Tensor
+        Labels for validation data.
+    labels_test : torch.Tensor
+        Labels for test data.
+    feat_train : torch.Tensor
+        Features for training data.
+    feat_val : torch.Tensor
+        Features for validation data.
+    feat_test : torch.Tensor
+        Features for test data.
+
+    Methods:
+    --------
+    __init__(self, data, dataset, norm=True):
+        Initializes the TransAndInd object with data and dataset information.
+
+    to(self, device):
+        Moves data to the specified device.
+
+    pyg_saint(self, data):
+        Processes data in PyG or SAINT format.
+
+    retrieve_class(self, c, num=256):
+        Retrieves a specified number of samples from a given class.
+
+    retrieve_class_sampler(self, c, adj, args, num=256):
+        Retrieves a sampler for a given class.
+
+    reset(self):
+        Resets the samplers and class_dict2 attributes.
+    """
 
     def __init__(self, data, dataset, norm=True):
         self.class_dict = None  # sample the training data per class when initializing synthetic graph
@@ -122,45 +212,80 @@ class TransAndInd:
         self.feat_test = self.feat_full[self.idx_test]
 
     def to(self, device):
-        """Move data to the specified device."""
-        self.feat_full = self.feat_full.to(device)
-        self.labels_full = self.labels_full.to(device)
-        self.x = self.x.to(device)
-        self.y = self.y.to(device)
-        self.edge_index = self.edge_index.to(device)
+        """
+        Transfers specified attributes of the dataset to the given device.
+        This method moves the following attributes to the specified device:
+        'feat_full', 'labels_full', 'x', 'y', 'edge_index', 'feat_train', 
+        'feat_val', 'feat_test'. It checks if each attribute exists before 
+        attempting to move it to avoid errors due to uninitialized data.
+        Args:
+            device (torch.device): The device to which the attributes should be moved.
+        Returns:
+            self: The dataset object with its attributes moved to the specified device.
+        """
+        
+        # 将所有需要迁移的属性放入一个列表中，避免重复代码
+        attrs_to_move = [
+            'feat_full', 'labels_full', 'x', 'y', 'edge_index',
+            'feat_train', 'feat_val', 'feat_test'
+        ]
+        
+        # attrs_to_move.extend(['labels_train', 'labels_val', 'labels_test'])
 
-        self.feat_train = self.feat_train.to(device)
-        self.feat_val = self.feat_val.to(device)
-        self.feat_test = self.feat_test.to(device)
-
-        # self.labels_train = self.labels_train.to(device)
-        # self.labels_val = self.labels_val.to(device)
-        # self.labels_test = self.labels_test.to(device)
+        for attr in attrs_to_move:
+            # 检查属性是否存在，防止某些数据未初始化而引发错误
+            if hasattr(self, attr):
+                setattr(self, attr, getattr(self, attr).to(device))
 
         return self
 
     def pyg_saint(self, data):
+        """
+        Processes the input data and sets various attributes based on the format of the data.
+        Parameters:
+        data (object): The input data object. It can be in two formats:
+            - PyG format: The data object should have attributes 'x', 'y', and 'edge_index'.
+            - SAINT format: The data object should have attributes 'feat_full', 'labels_full', and 'adj_full'.
+        Returns:
+        object: The input data object.
+        Attributes Set:
+        - self.x: Node features (PyG format) or full features (SAINT format).
+        - self.y: Node labels (PyG format) or full labels (SAINT format).
+        - self.feat_full: Full node features.
+        - self.labels_full: Full node labels.
+        - self.adj_full: Full adjacency matrix.
+        - self.edge_index: Edge index in COO format.
+        - self.sparse_adj: Sparse adjacency matrix in SparseTensor format.
+        """
+        # Function implementation
+        
         # reference type
         # pyg format use x,y,edge_index
         if hasattr(data, 'x'):
-            self.x = data.x
-            self.y = data.y
-            self.feat_full = data.x
-            self.labels_full = data.y
-            self.adj_full = edge_index_to_c_s_r(data.edge_index, data.x.shape[0])
-            self.edge_index = data.edge_index
-            self.sparse_adj = SparseTensor.from_edge_index(data.edge_index)
-        # saint format use feat,labels,adj
+            # PyG 格式的数据处理
+            self.process_pyg_format(data)
         elif hasattr(data, 'feat_full'):
-            self.adj_full = data.adj_full
-            self.feat_full = data.feat_full
-            self.labels_full = data.labels_full
-            self.edge_index = csr2ei(data.adj_full)
-            self.sparse_adj = SparseTensor.from_edge_index(self.edge_index)
-            self.x = data.feat_full
-            self.y = data.labels_full
+            # SAINT 格式的数据处理
+            self.process_saint_format(data)
+        
         return data
 
+    def process_pyg_format(self, data):
+        """处理 PyG 格式的数据"""
+        self.x = self.feat_full = data.x
+        self.y = self.labels_full = data.y
+        self.adj_full = edge_index_to_c_s_r(data.edge_index, data.x.shape[0])
+        self.edge_index = data.edge_index
+        self.sparse_adj = SparseTensor.from_edge_index(data.edge_index)
+
+    def process_saint_format(self, data):
+        """处理 SAINT 格式的数据"""
+        self.adj_full = data.adj_full
+        self.feat_full = self.x = data.feat_full
+        self.labels_full = self.y = data.labels_full
+        self.edge_index = csr2ei(data.adj_full)
+        self.sparse_adj = SparseTensor.from_edge_index(self.edge_index)
+    
     def retrieve_class(self, c, num=256):
         # change the initialization strategy here
         if self.class_dict is None:
@@ -211,79 +336,90 @@ class TransAndInd:
         return out
 
     def reset(self):
-        self.samplers = None
-        self.class_dict2 = None
-        self.labels_syn, self.feat_syn, self.adj_syn = None, None, None
+        """
+        Resets the synthetic data and samplers to None.
+
+        This method sets the following attributes to None:
+        - samplers: The samplers used for data loading.
+        - class_dict2: A dictionary mapping classes.
+        - labels_syn: Synthetic labels.
+        - feat_syn: Synthetic features.
+        - adj_syn: Synthetic adjacency matrix.
+        """
+        self.samplers = self.class_dict2 = self.labels_syn = self.feat_syn = self.adj_syn = None
+
 
 
 class LargeDataLoader(nn.Module):
     def __init__(self, name='Flickr', split='train', batch_size=200, split_method='kmeans'):
         super(LargeDataLoader, self).__init__()
         path = osp.join('../../data')
-        if name in ['ogbn-arxiv']:
+        self.split_method = split_method
+
+        
+        # Load dataset based on the name
+        if name.lower() == 'ogbn-arxiv':
             dataset = DataGraphSAINT(root=path, dataset=name)
             dataset.num_classes = 40
             data = dataset[0]
-            self.n, self.dim = data.feat_full.shape
-            labels = data.labels_full
             features = to_tensor(data.feat_full)
+            labels = data.labels_full
             edge_index = csr2ei(data.adj_full)
-            values = torch.ones(edge_index.shape[1])
-            Adj = torch.sparse_coo_tensor(edge_index, values, torch.Size([self.n, self.n]))
-            sparse_eye = torch.sparse_coo_tensor(torch.arange(self.n).repeat(2, 1), torch.ones(self.n),
-                                                 (self.n, self.n))
-            self.Adj = Adj + sparse_eye
-
-            features = self.normalize_data(features)
-            features = self.GCF(self.Adj, features, k=1)
-
             self.split_idx = torch.tensor(data.idx_train)
-            self.n_split = len(self.split_idx)
-            self.k = torch.round(torch.tensor(self.n_split / batch_size)).to(torch.int)
-            self.split_feat = features[self.split_idx]
-            self.split_label = labels[self.split_idx]
-
-            self.split_method = split_method
             self.n_classes = dataset.num_classes
         else:
-            if name == 'flickr':
-                from torch_geometric.datasets import Flickr as DataSet
-            elif name == 'reddit':
-                from torch_geometric.datasets import Reddit2 as DataSet
+            dataset_cls = {'flickr': Flickr, 'reddit': Reddit2}.get(name.lower())
+            if dataset_cls is None:
+                raise ValueError(f"Unsupported dataset name: {name}")
 
-            Dataset = DataSet(root=path + f'/{name}')
-            self.n, self.dim = Dataset[0].x.shape
-            mask = split + '_mask'
-            features = Dataset[0].x
-            labels = Dataset[0].y
-            edge_index = Dataset[0].edge_index
+            dataset = dataset_cls(root=osp.join(path, name))
+            data = dataset[0]
+            features = data.x
+            labels = data.y
+            edge_index = data.edge_index
+            mask = f'{split}_mask'
+            self.split_idx = torch.where(data[mask])[0]
+            self.n_classes = dataset.num_classes
+        
+        # Common attributes
+        self.n, self.dim = features.shape
+        self.n_split = len(self.split_idx)
+        self.k = int(round(self.n_split / batch_size))
 
-            values = torch.ones(edge_index.shape[1])
-            Adj = torch.sparse_coo_tensor(edge_index, values, torch.Size([self.n, self.n]))
-            sparse_eye = torch.sparse_coo_tensor(torch.arange(self.n).repeat(2, 1), torch.ones(self.n),
-                                                 (self.n, self.n))
-            self.Adj = Adj + sparse_eye
-            features = self.normalize_data(features)
-            # features      = self.GCF(self.Adj, features, k=2)
-            self.split_idx = torch.where(Dataset[0][mask])[0]
-            self.n_split = len(self.split_idx)
-            self.k = torch.round(torch.tensor(self.n_split / batch_size)).to(torch.int)
+        # Create adjacency matrix
+        self.Adj = self.create_adjacency_matrix(edge_index, self.n)
 
-            # Masked Adjacency Matrix
-            optor_index = torch.cat(
-                (self.split_idx.reshape(1, self.n_split), torch.tensor(range(self.n_split)).reshape(1, self.n_split)),
-                dim=0)
-            optor_value = torch.ones(self.n_split)
-            optor_shape = torch.Size([self.n, self.n_split])
-            optor = torch.sparse_coo_tensor(optor_index, optor_value, optor_shape)
-            self.Adj_mask = torch.sparse.mm(torch.sparse.mm(optor.t(), self.Adj), optor)
-            self.split_feat = features[self.split_idx]
-            # self.split_feat   = self.GCF(self.Adj_mask, self.split_feat, k = 2)
+        # Normalize features
+        features = self.normalize_data(features)
 
-            self.split_label = labels[self.split_idx]
-            self.split_method = split_method
-            self.n_classes = Dataset.num_classes
+        # Apply GCF if needed, in the original code, this is enabled for ogbn-arxiv only
+        # features = self.GCF(self.Adj, features, k=1)
 
+        self.split_feat = features[self.split_idx]
+        self.split_label = labels[self.split_idx]
+
+        # Masked adjacency for non-ogbn-arxiv datasets
+        if name.lower() != 'ogbn-arxiv':
+            self.Adj_mask = self.create_masked_adjacency(self.Adj, self.split_idx)
+            # Optionally apply GCF on masked adjacency
+            # self.split_feat = self.GCF(self.Adj_mask, self.split_feat, k=2)
+            
+
+    
+    def create_adjacency_matrix(self, edge_index, num_nodes):
+        values = torch.ones(edge_index.shape[1])
+        Adj = torch.sparse_coo_tensor(edge_index, values, (num_nodes, num_nodes))
+        identity = torch.eye(num_nodes)
+        return Adj + identity
+
+    def create_masked_adjacency(self, Adj, split_idx):
+        n_split = len(split_idx)
+        optor_index = torch.stack([split_idx, torch.arange(n_split)])
+        optor = torch.sparse_coo_tensor(optor_index, torch.ones(n_split), (self.n, n_split))
+        return torch.sparse.mm(torch.sparse.mm(optor.t(), Adj), optor)
+
+
+    
     def normalize_data(self, data):
         """
         normalize data
@@ -298,27 +434,50 @@ class LargeDataLoader(nn.Module):
         normalized_data = (data - mean) / std
         return normalized_data
 
-    def GCF(self, adj, x, k=2):
+
+    def graph_conv_filter(self, adj, x, k=2):
         """
-        Graph convolution filter
-        parameters:
-            adj: torch.Tensor, adjacency matrix, must be self-looped
-            x: torch.Tensor, features
-            k: int, number of hops
-        return:
-            torch.Tensor, filtered features
+        Graph Convolutional Filter (GCF) for propagating features through a graph.
+        Parameters:
+        adj (torch.sparse.FloatTensor): The adjacency matrix of the graph in sparse format.
+        x (torch.Tensor): The feature matrix of the nodes.
+        k (int, optional): The number of propagation steps. Default is 2.
+        Returns:
+        torch.Tensor: The propagated feature matrix after k steps.
         """
+        
+        # Get the number of nodes
         n = adj.shape[0]
-        ind = torch.tensor(range(n)).repeat(2, 1)
-        adj = adj + torch.sparse_coo_tensor(ind, torch.ones(n), (n, n))
 
-        D = torch.pow(torch.sparse.sum(adj, 1).to_dense(), -0.5)
-        D = torch.sparse_coo_tensor(ind, D, (n, n))
+        # Add self-loops to adjacency matrix
+        adj = self.add_self_loops(adj, n)
 
-        filter = torch.sparse.mm(torch.sparse.mm(D, adj), D)
-        for i in range(k):
+        # Compute the degree matrix D^-1/2 for normalization
+        D_inv_sqrt = torch.pow(torch.sparse.sum(adj, dim=1).to_dense(), -0.5)
+        D_inv_sqrt = torch.diag(D_inv_sqrt)
+
+        # Apply D^-1/2 * A * D^-1/2 normalization
+        filter = torch.sparse.mm(torch.sparse.mm(D_inv_sqrt, adj), D_inv_sqrt)
+
+        # Propagate features through the graph for k steps
+        for _ in range(k):
             x = torch.sparse.mm(filter, x)
+
         return x
+
+    def add_self_loops(self, adj, n):
+        """
+        Adds self-loops to the adjacency matrix.
+        Parameters:
+            adj: torch.Tensor, adjacency matrix
+            n: int, number of nodes
+        Returns:
+            torch.Tensor, adjacency matrix with self-loops
+        """
+        ind = torch.arange(n).repeat(2, 1)
+        identity = torch.sparse_coo_tensor(ind, torch.ones(n), (n, n))
+        return adj + identity
+    
 
     def properties(self):
         return self.k, self.n_split, self.n_classes, self.dim, self.n
@@ -359,18 +518,14 @@ class LargeDataLoader(nn.Module):
         return batch_i
 
 
-class OgbDataLoader(nn.Module):
-    def __init__(self, dataset_name='ogbn-arxiv', split='train', batch_size=5000, split_method='kmeans'):
-        super(OgbDataLoader, self).__init__()
-
-
 class DataGraphSAINT:
     '''datasets used in GraphSAINT paper'''
 
     def __init__(self, root, dataset, **kwargs):
-        import gdown
         dataset = dataset.replace('-', '_')
+        
         dataset_str = root + '/' + dataset + '/raw/'
+        
         if not osp.exists(dataset_str):
             os.makedirs(dataset_str)
             print('Downloading dataset')
@@ -384,7 +539,8 @@ class DataGraphSAINT:
                 shutil.rmtree(downloaded_folder)
 
         if dataset == 'ogbn_arxiv':
-            self.adj_full = sp.load_npz(dataset_str + 'adj_full.npz')
+            dataset_str = dataset_str +'ogbn-arxiv/'
+            self.adj_full = sp.load_npz(dataset_str  +'adj_full.npz')
             self.adj_full = self.adj_full + self.adj_full.T
             self.adj_full[self.adj_full > 1] = 1
 

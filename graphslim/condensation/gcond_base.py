@@ -217,7 +217,7 @@ class GCondBase:
 
 
 
-    def train_class(self, model, adj, features, labels, labels_syn, args, soft=True):
+    def train_class(self, model, adj, features, labels, labels_syn, args, use_soft_labels=True):
         """
         Trains the model and computes the loss.
 
@@ -246,7 +246,16 @@ class GCondBase:
         adj_syn = self.adj_syn
         loss = torch.tensor(0.0, device=self.device)
 
-        if not soft:
+        if use_soft_labels:
+            loss_fn = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
+            # Convert labels to one-hot encoding if they are class indices
+            if labels.dim() == 1:
+                soft_labels = F.one_hot(labels, num_classes=data.nclass).float()
+            if labels_syn.dim() == 1:
+                soft_labels_syn = F.one_hot(labels_syn, num_classes=data.nclass).float()
+            else:
+                soft_labels_syn = labels_syn
+        else:
             loss_fn = F.nll_loss
             # Convert labels to class indices if they are one-hot encoded
             if labels.dim() > 1:
@@ -257,18 +266,8 @@ class GCondBase:
                 hard_labels_syn = torch.argmax(labels_syn, dim=-1)
             else:
                 hard_labels_syn = labels_syn.long()
-        else:
-            loss_fn = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
-            # Convert labels to one-hot encoding if they are class indices
-            if labels.dim() == 1:
-                hard_labels = labels
-                soft_labels = F.one_hot(labels, num_classes=data.nclass).float()
-            if labels_syn.dim() == 1:
-                hard_labels_syn = labels
-                soft_labels_syn = F.one_hot(labels_syn, num_classes=data.nclass).float()
-            else:
-                hard_labels_syn = torch.argmax(labels_syn, dim=-1)
-                soft_labels_syn = labels_syn
+                
+            
 
         # Loop over each class
         for c in range(data.nclass):
@@ -276,7 +275,7 @@ class GCondBase:
             batch_size, n_id, adjs = data.retrieve_class_sampler(c, adj, args)
             adjs = [adj[0].to(self.device) for adj in adjs]
             input_real = features[n_id].to(self.device)
-            if soft:
+            if use_soft_labels:
                 labels_real = soft_labels[n_id[:batch_size]].to(self.device)
             else:
                 labels_real = hard_labels[n_id[:batch_size]].to(self.device)
@@ -288,14 +287,14 @@ class GCondBase:
             gw_real = [g.detach().clone() for g in gw_real]
 
             output_syn = model(feat_syn, adj_syn)
-            if soft:
-                loss_syn = loss_fn(output_syn[hard_labels_syn == c], soft_labels_syn[hard_labels_syn == c])
+            if use_soft_labels:
+                synthetic_loss = loss_fn(output_syn[soft_labels_syn == c], soft_labels_syn[soft_labels_syn == c])
             else:
-                loss_syn = loss_fn(output_syn[hard_labels_syn == c], hard_labels_syn[hard_labels_syn == c])
+                synthetic_loss = loss_fn(output_syn[hard_labels_syn == c], hard_labels_syn[hard_labels_syn == c])
 
 
             # Compute gradients w.r.t. model parameters for synthetic data
-            gw_syn = torch.autograd.grad(loss_syn, model.parameters(), create_graph=True)
+            gw_syn = torch.autograd.grad(synthetic_loss, model.parameters(), create_graph=True)
 
             # Compute matching loss between gradients
             coeff = self.num_class_dict[c] / self.nnodes_syn
@@ -304,23 +303,9 @@ class GCondBase:
 
         return loss
 
-    def get_loops(self, args):
-        # Get the two hyper-parameters of outer-loop and inner-loop.
-        # The following values are empirically good.
-        """
-        Retrieves the outer-loop and inner-loop hyperparameters.
 
-        Parameters
-        ----------
-        args : Namespace
-            Arguments object containing hyperparameters for training and model.
 
-        Returns
-        -------
-        tuple
-            Outer-loop and inner-loop hyperparameters.
-        """
-        return args.outer_loop, args.inner_loop
+
 
     def check_bn(self, model):
         """

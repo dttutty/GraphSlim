@@ -9,7 +9,7 @@ from graphslim.coarsening.coarsening_base import Coarsen
 from graphslim.coarsening import HeavyEdge
 from graphslim.dataset import *
 
-args = cli(standalone_mode=False)
+args = parse_cli_arguments(standalone_mode=False)
 
 graph = get_dataset(args.dataset, args)
 agent = Coarsen(setting=args.setting, data=graph, args=args)

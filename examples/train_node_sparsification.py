@@ -4,12 +4,12 @@ import os, sys
 if os.path.abspath('../graphslim') not in sys.path:
     sys.path.append(os.path.abspath('../graphslim'))
 
-from graphslim.config import cli
+from graphslim.config import parse_cli_arguments
 from graphslim.dataset import *
 from graphslim.evaluation import *
 from graphslim.sparsification import KCenter
 
-args = cli(standalone_mode=False)
+args = parse_cli_arguments(standalone_mode=False)
 graph = get_dataset(args.dataset, args)
 all_res = []
 for i in range(args.run_reduction):

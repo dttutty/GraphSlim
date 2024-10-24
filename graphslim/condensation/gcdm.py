@@ -29,7 +29,7 @@ class GCDM(GCondBase):
 
         adj = normalize_adj_tensor(adj, sparse=True)
 
-        outer_loop, inner_loop = self.get_loops(args)
+        outer_loop, inner_loop = args.outer_loop, args.inner_loop
         model = eval(args.condense_model)(self.d, args.hidden,
                                           data.nclass, args).to(self.device)
 
