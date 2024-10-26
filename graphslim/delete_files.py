@@ -20,6 +20,6 @@ def delete_files_without_text(directory, target_text):
                     print(f"处理文件时出错: {file_path}, 错误: {e}")
 
 # 使用示例
-directory = "/home/sqp17/Projects/GraphSlim/graphslim/logs/20241024005243"  # 指定要搜索的目录路径
+directory = "/home/sqp17/Projects/GraphSlim/graphslim/logs/Cheby"  # 指定要搜索的目录路径
 target_text = "Test Mean Accuracy"
 delete_files_without_text(directory, target_text)

@@ -30,10 +30,10 @@ def get_free_gpu_memory():
     return [int(x) for x in result.stdout.decode('utf-8').strip().split('\n')]
 
 def run_task(method, standard_name):
-    log_file_path = f"/home/sqp17/Projects/GraphSlim/graphslim/logs/graphsage/{standard_name}/log_{method}.txt"
-    if os.path.exists(log_file_path):
-        print(f"Log file {log_file_path} already exists. Skipping task: {method} on dataset: {standard_name}")
-        return
+    # log_file_path = f"/home/sqp17/Projects/GraphSlim/graphslim/logs/graphsage/{standard_name}/log_{method}.txt"
+    # if os.path.exists(log_file_path):
+    #     print(f"Log file {log_file_path} already exists. Skipping task: {method} on dataset: {standard_name}")
+    #     return
     """Runs a task on an available GPU."""
     while True:
         free_memory = get_free_gpu_memory()
@@ -43,12 +43,12 @@ def run_task(method, standard_name):
                 os.makedirs(log_dir, exist_ok=True)
                 
                 command = [
-                    "yes", "N", "|", "python", "train_all.py", 
+                    "python", "train_all.py", 
                     "--dataset", standard_name, 
                     "--method", method, 
                     "--verbose", 
                     "--gpu_id", str(gpu_id),
-                    "--eval_model", 'GraphSage'
+                    "--eval_model", 'SGFormer'
                 ]
                 
                 log_file = os.path.join(log_dir, f"log_{method}.txt")
